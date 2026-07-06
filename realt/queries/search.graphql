@@ -1,0 +1,124 @@
+query searchObjects($data: GetObjectsByAddressInput!) {
+    searchObjects(data: $data) {
+        body {
+            results {
+                companyName
+                companyUuid
+                uuid
+                title
+                description
+                headline
+                createdAt
+                updatedAt
+                metroTime
+                metroTimeType
+                price
+                priceCurrency
+                pricePerM2
+                pricePerM2Max
+                pricePerPerson
+                priceMin
+                priceMax
+                priceChangeDirection
+                priceChangeDate
+                storeys
+                storey
+                rooms
+                contactPhones
+                images
+                areaTotal
+                areaLiving
+                areaMax
+                areaMin
+                areaLand
+                objectType
+                code
+                stateRegionName
+                stateDistrictName
+                townType
+                townName
+                streetUuid
+                streetName
+                address
+                contactName
+                contactEmail
+                agencyName
+                metroStationName
+                metroLineId
+                houseNumber
+                buildingNumber
+                paymentStatus
+                comments
+                isFavorite
+                category
+                has3dTour
+                hasVideo
+                stateRegionUuid
+                numberOfBeds
+                directionName
+                townDistance
+                customSorting
+                specialComment
+                userUuid
+                agencyUuid
+                location
+                townUuid
+                buildingYear
+                levels
+                roofMaterial
+                wallMaterial
+                heating
+                infrastructure
+                balconyType
+                houseType
+                furniture
+                areaKitchen
+                appliances
+                objectCategory
+                realEstateDevUuid
+                availableYear
+                availableQuarter
+                availableAlready
+                availableText
+                isSellingCompleted
+                communicationMethod
+                interactiveCatalogToken
+                interactiveCatalogBaseToken
+                isObjectInRealtyDeal
+                repairState
+                __typename
+            }
+            pagination {
+                page
+                pageSize
+                totalCount
+                __typename
+            }
+            rates {
+                from
+                to
+                rate
+                __typename
+            }
+            extraFields {
+                minPriceAggregation
+                __typename
+            }
+            __typename
+        }
+        ...StatusAndErrors
+        __typename
+    }
+}
+
+fragment StatusAndErrors on INullResponse {
+    success
+    errors {
+        code
+        title
+        message
+        field
+        __typename
+    }
+    __typename
+}
