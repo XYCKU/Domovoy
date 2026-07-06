@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -22,19 +23,67 @@ type graphqlRequest struct {
 	Variables     map[string]interface{} `json:"variables"`
 }
 
-type graphqlResponse struct {
-	Data json.RawMessage `json:"data"`
+type SearchFilter struct {
+	Category  int
+	Rooms     []string
+	PriceTo   string
+	PriceType string
+	TownUUID  string
+}
+
+type SearchResult struct {
+	Success bool `json:"success"`
+	Body    struct {
+		Pagination Pagination `json:"pagination"`
+		Results    []Object   `json:"results"`
+	} `json:"body"`
+}
+
+type Pagination struct {
+	Page       int `json:"page"`
+	PageSize   int `json:"pageSize"`
+	TotalCount int `json:"totalCount"`
+}
+
+type Object struct {
+	UUID          string  `json:"uuid"`
+	Code          int     `json:"code"`
+	Category      int     `json:"category"`
+	CreatedAt     string  `json:"createdAt"`
+	UpdatedAt     string  `json:"updatedAt"`
+	RaiseDate     string  `json:"raiseDate"`
+	Price         float64 `json:"price"`
+	PriceCurrency int     `json:"priceCurrency"`
+	PricePerM2    float64 `json:"pricePerM2"`
+	Rooms         int     `json:"rooms"`
+	AreaTotal     float64 `json:"areaTotal"`
+	AreaLiving    float64 `json:"areaLiving"`
+	AreaKitchen   float64 `json:"areaKitchen"`
+	Storey        int     `json:"storey"`
+	Storeys       int     `json:"storeys"`
+	BuildingYear  int     `json:"buildingYear"`
+
+	TownName          string `json:"townName"`
+	StateDistrictName string `json:"stateDistrictName"`
+	StreetName        string `json:"streetName"`
+	HouseNumber       int    `json:"houseNumber"`
+	Address           string `json:"address"`
+
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Images      []string `json:"images"`
 }
 
 type Client struct {
-	http *http.Client
+	http  *http.Client
+	Debug bool
 }
 
 func NewClient() *Client {
 	return &Client{http: &http.Client{Timeout: 15 * time.Second}}
 }
 
-func (c *Client) Search(ctx context.Context, page int) (json.RawMessage, error) {
+func (c *Client) Search(ctx context.Context, filter SearchFilter, page int) (*SearchResult, error) {
 	reqBody := []graphqlRequest{
 		{
 			OperationName: "searchObjects",
@@ -42,14 +91,14 @@ func (c *Client) Search(ctx context.Context, page int) (json.RawMessage, error) 
 			Variables: map[string]interface{}{
 				"data": map[string]interface{}{
 					"where": map[string]interface{}{
-						"category":       5,
-						"rooms":          []string{"2"},
-						"priceTo":        "90000",
-						"priceType":      "840",
+						"category":       filter.Category,
+						"rooms":          filter.Rooms,
+						"priceTo":        filter.PriceTo,
+						"priceType":      filter.PriceType,
 						"priceMeterType": "all",
 						"addressV2": []map[string]string{
 							{
-								"townUuid": "4cb07174-7b00-11eb-8943-0cc47adabd66",
+								"townUuid": filter.TownUUID,
 							},
 						},
 					},
@@ -75,7 +124,9 @@ func (c *Client) Search(ctx context.Context, page int) (json.RawMessage, error) 
 		return nil, err
 	}
 
-	fmt.Println(string(raw))
+	if c.Debug {
+		fmt.Println(string(raw))
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
 	if err != nil {
@@ -83,30 +134,32 @@ func (c *Client) Search(ctx context.Context, page int) (json.RawMessage, error) 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "*/*")
-	req.Header.Set("X-Realt-Client", "www@6.14.4")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Printf("Error closing response: %d\n", resp.StatusCode)
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("error closing body: %v", err)
 		}
-	}(resp.Body)
+	}()
 
 	b, _ := io.ReadAll(resp.Body)
 
-	fmt.Printf("Status: %d\n", resp.StatusCode)
-	fmt.Println(string(b))
+	if c.Debug {
+		fmt.Printf("Status: %d: %s\n", resp.StatusCode, string(b))
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
 	}
 
-	var out []graphqlResponse
+	var out []struct {
+		Data struct {
+			SearchObjects SearchResult `json:"searchObjects"`
+		} `json:"data"`
+	}
 	if err := json.Unmarshal(b, &out); err != nil {
 		return nil, err
 	}
@@ -115,5 +168,5 @@ func (c *Client) Search(ctx context.Context, page int) (json.RawMessage, error) 
 		return nil, fmt.Errorf("empty graphql response")
 	}
 
-	return out[0].Data, nil
+	return &out[0].Data.SearchObjects, nil
 }
