@@ -53,8 +53,8 @@ func (s *Store) Upsert(ctx context.Context, o realt.Object) (isNew bool, err err
 		return false, err
 	}
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			log.Printf("failed to rollback transaction: %v", err)
+		if cerr := tx.Rollback(ctx); cerr != nil {
+			log.Printf("failed to rollback transaction: %v", cerr)
 		}
 	}()
 
