@@ -63,11 +63,11 @@ type Object struct {
 	Storeys       int     `json:"storeys"`
 	BuildingYear  int     `json:"buildingYear"`
 
-	TownName          string `json:"townName"`
-	StateDistrictName string `json:"stateDistrictName"`
-	StreetName        string `json:"streetName"`
-	HouseNumber       int    `json:"houseNumber"`
-	Address           string `json:"address"`
+	TownName     string `json:"townName"`
+	DistrictName string `json:"stateDistrictName"`
+	StreetName   string `json:"streetName"`
+	HouseNumber  int    `json:"houseNumber"`
+	Address      string `json:"address"`
 
 	Title       string   `json:"title"`
 	Description string   `json:"description"`

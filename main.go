@@ -1,16 +1,26 @@
 package main
 
 import (
+	"Domovoy/internal/storage"
 	"Domovoy/realt"
 	"context"
-	"fmt"
 	"log"
-	"time"
+	"os"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	ctx := context.Background()
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://realty:realty@localhost:5432/realty?sslmode=disable"
+		log.Print("DATABASE_URL environment variable not set")
+	}
+
+	store, err := storage.New(ctx, dsn)
+	if err != nil {
+		log.Fatalf("db: %v", err)
+	}
+	defer store.Close()
 
 	client := realt.NewClient()
 
@@ -27,8 +37,18 @@ func main() {
 		log.Fatalf("search failed: %v", err)
 	}
 
-	fmt.Printf("total: %d\n", res.Body.Pagination.TotalCount)
+	newCount := 0
 	for _, obj := range res.Body.Results {
-		fmt.Printf("%+v\n", obj)
+		isNew, err := store.Upsert(ctx, obj)
+		if err != nil {
+			log.Printf("insert failed: %v", err)
+			continue
+		}
+		if isNew {
+			newCount++
+			log.Printf("NEW: %s | %.0f | %d rooms | %s", obj.UUID, obj.Price, obj.Rooms, obj.Address)
+		}
 	}
+
+	log.Printf("done: %d new listings", newCount)
 }

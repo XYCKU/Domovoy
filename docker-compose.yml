@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: realty-db
+    environment:
+      POSTGRES_USER: realty
+      POSTGRES_PASSWORD: realty
+      POSTGRES_DB: realty
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", pg_isready -U realty]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-migrate:
+    image: migrate/migrate:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command:
+      [
+          "-path", "/migrations",
+          "-database", "postgres://realty:realty@db:5432/realty?sslmode=disable",
+          "up"
+      ]
+
+  bot:
+    build: .
+    container_name: realty-bot
+    depends_on:
+      postgres-migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://realty:realty@db:5432/realty?sslmode=disable
+    restart: unless-stopped
+volumes:
+  pgdata:
